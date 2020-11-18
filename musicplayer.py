@@ -11,7 +11,15 @@ class Player(tk.Frame):      #player class
         self.master=master
         self.pack()
 
-        self.playlist=[]
+        if os.path.exists('songs.pickle'):
+            with open('songs.pickle','r') as f:
+                self.playlist=pickle.load(f)
+        else:
+            self.playlist=[]
+
+        self.current=0
+        self.paused= True
+        self.played= False
 
         self.create_frames()
         self.track_widgets()
@@ -25,7 +33,7 @@ class Player(tk.Frame):      #player class
         self.track.configure(width=410,height=300)
         self.track.grid(row=0,column=0,padx=10)
 
-        self.tracklist = tk.LabelFrame(self, text=f'Playlist - {len(self.playlist)}',
+        self.tracklist = tk.LabelFrame(self, text=f'Playlist - {str(len(self.playlist))}',
                                    font=("Times New Roman", 14, "bold"),
                                    bg="grey", fg="white", bd=5, relief=tk.GROOVE)
         self.tracklist.configure(width=190, height=400)
@@ -52,10 +60,77 @@ class Player(tk.Frame):      #player class
 
 
     def control_widgets(self):
-        pass
+        self.loadSongs=tk.Button(self.controls, bg='green',fg='white',font=10)
+        self.loadSongs['text']= 'Load Songs'
+        self.loadSongs['command']= self.retrieve_songs
+        self.loadSongs.grid(row=0,column=0, padx=10)
+
+        self.prev = tk.Button(self.controls,image=prev )
+        self.prev['command']= self.prev_song
+        self.prev.grid(row=0, column=1)
+
+        self.pause = tk.Button(self.controls, image=pause )
+        self.pause['command']=self.pause_song
+        self.pause.grid(row=0, column=2)
+
+        self.next = tk.Button(self.controls, image=next_ )
+        self.next['command']=self.next_song
+        self.next.grid(row=0, column=3)
+
+        self.volume= tk.DoubleVar()
+        self.slider=tk.Scale(self.controls, from_=0, to=15, orient=tk.HORIZONTAL)
+        self.slider['variable']= self.volume
+        self.slider.set(7)
+        self.slider['command']=self.change_volume
+        self.slider.grid(row=0,column=4, padx=5)
+
 
     def tracklist_widget(self):
+        self.scrollbar=tk.Scrollbar(self.tracklist,orient=tk.VERTICAL)
+        self.scrollbar.grid(row=0,column=1, rowspan=5, sticky='ns')
+
+        self.list= tk.Listbox(self.tracklist, selectmode=tk.SINGLE,
+                     yscrollcommand= self.scrollbar.set, selectbackground= 'sky blue')
+        self.enumerate_songs()
+        self.list.config(height=22)
+
+        self.scrollbar.config(command=self.list.yview)
+        self.list.grid(row=0,column=0,rowspan=5)
+
+    def enumerate_songs(self):
+        for index, song in enumerate(self.playlist):
+            self.list.insert(index, os.path.basename(song))
+
+    def retrieve_songs(self):
+        self.songlist=[]
+        directory= filedialog.askdirectory()
+        for root_,dirs,files in os.walk(directory):
+            for file in files:
+                if os.path.splitext(file)[1]== '.mp3':
+                    path=(root_ + '/'+ file).replace('\\','/')
+                    self.songlist.append(path)
+        with open('songs.pickle', 'wb') as f:
+            pickle.dump(self.songlist,f)
+
+        self.playlist=self.songlist
+        self.tracklist['text']=f'Playlist - {str(len(self.playlist))}'
+        self.list.delete(0, tk.END)
+        self.enumerate_songs()
+
+
+
+    def pause_song(self):
         pass
+
+    def prev_song(self):
+        pass
+
+    def next_song(self):
+        pass
+
+    def change_volume(self,event=None):
+        self.v= self.volume.get()
+        print(self.v)
 
 
 root=tk.Tk()
@@ -63,6 +138,10 @@ root.geometry('600x400')
 root.wm_title('Music player')
 
 img= PhotoImage(file='images/music.gif')
+next_= PhotoImage(file= 'images/next.gif')
+prev= PhotoImage(file='images/previous.gif')
+play= PhotoImage(file='images/play.gif')
+pause= PhotoImage(file='images/pause.gif')
 
 app=Player(master=root)
 app.mainloop()
