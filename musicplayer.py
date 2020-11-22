@@ -11,8 +11,10 @@ class Player(tk.Frame):      #player class
         self.master=master
         self.pack()
 
+        mixer.init()
+
         if os.path.exists('songs.pickle'):
-            with open('songs.pickle','r') as f:
+            with open('songs.pickle','rb') as f:
                 self.playlist=pickle.load(f)
         else:
             self.playlist=[]
@@ -51,11 +53,11 @@ class Player(tk.Frame):      #player class
         self.canvas.configure(width=400, height=240)
         self.canvas.grid(row=0, column=0)
 
-        self.canvas= tk.Label(self.track, font=("Times New Roman", 15, "bold"),
+        self.songtrack= tk.Label(self.track, font=("Times New Roman", 15, "bold"),
                               bg='white',fg='dark blue')
-        self.canvas['text']='Music Player'
-        self.canvas.configure(width=30, height=1)
-        self.canvas.grid(row=1, column=0)
+        self.songtrack['text']='Music Player'
+        self.songtrack.configure(width=30, height=1)
+        self.songtrack.grid(row=1, column=0)
 
 
 
@@ -81,6 +83,7 @@ class Player(tk.Frame):      #player class
         self.slider=tk.Scale(self.controls, from_=0, to=15, orient=tk.HORIZONTAL)
         self.slider['variable']= self.volume
         self.slider.set(7)
+        mixer.music.set_volume(0.7)
         self.slider['command']=self.change_volume
         self.slider.grid(row=0,column=4, padx=5)
 
@@ -93,6 +96,7 @@ class Player(tk.Frame):      #player class
                      yscrollcommand= self.scrollbar.set, selectbackground= 'sky blue')
         self.enumerate_songs()
         self.list.config(height=22)
+        self.list.bind('<Double-1>', self.play_song)
 
         self.scrollbar.config(command=self.list.yview)
         self.list.grid(row=0,column=0,rowspan=5)
@@ -117,20 +121,58 @@ class Player(tk.Frame):      #player class
         self.list.delete(0, tk.END)
         self.enumerate_songs()
 
+    def play_song(self, event= None):
+         if event is not None:
+             self.current=self.list.curselection()[0]
+             for i in range(len(self.playlist)):
+                self.list.itemconfigure(i, bg='white')
+
+         mixer.music.load(self.playlist[self.current])
+         self.pause['image']= play
+         self.paused= False
+         self.played= True
+         self.songtrack['anchor']='w'
+         self.songtrack['text']=os.path.basename(self.playlist[self.current])
+         self.list.activate(self.current)
+         self.list.itemconfigure(self.current, bg='sky blue')
+         mixer.music.play()
+
 
 
     def pause_song(self):
-        pass
+        if not self.paused:
+            self.paused= True
+            mixer.music.pause()
+            self.pause['image']= pause
+        else:
+            if self.played == False:
+                self.play_song()
+            self.paused= False
+            mixer.music.unpause()
+            self.pause['image']= play
+
 
     def prev_song(self):
-        pass
+        if self.current >0:
+            self.current -= 1
+        else:
+            self.current=0
+        self.list.itemconfigure(self.current+1, bg='white')
+        self.play_song()
 
     def next_song(self):
-        pass
+        if self.current <len(self.playlist) - 1:
+            self.current += 1
+        else:
+            self.current=0
+            self.play_song()
+        self.list.itemconfigure(self.current-1, bg='white')
+        self.play_song()
+
 
     def change_volume(self,event=None):
         self.v= self.volume.get()
-        print(self.v)
+        mixer.music.set_volume(self.v/10)
 
 
 root=tk.Tk()
